@@ -14,7 +14,7 @@ VALUES ('Part Organizer', 30000, 1),
        ('Social Media Coordinator', 50000, 3);
   
 INSERT INTO employee (first_name, last_name, role_id, manager_id) 
-VALUES ('Slim', 'Shady', 1, 1),
+VALUES ('Slim', 'Shady', 1, 6),
        ('Larry', 'King', 2, NULL), --Manager of Sales
        ('Flava', 'Flave', 6, 2),
        ('Susan', 'Sarandon', 4, 2),

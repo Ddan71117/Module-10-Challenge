@@ -23,6 +23,7 @@ export async function addDept(): Promise<void> {
           console.log(err);
         } else if (result) {
           console.table('Department successfully added.');
+          cli.runCli();
         }
       }
     );
@@ -74,20 +75,9 @@ export async function addRole(): Promise<void> {
       },
   ])
   .then((answers) => {
-    switch (answers.roleDept) { //this is some of the logic a TA was helping me with to assign a manager to certain roles, but we ran out of time
-      case 1:
-        answers.manager_id = 1;
-        console.log("--->", answers);
-      break;
-      case 2:
-        answers.manager.id = 2;
-        console.log("--->", answers);
-      break;
-      default:
-    }
-    answers.manager = {}
+    
     const { roleName, roleSalary, roleDept } = answers;
-    return pool.query(`INSERT INTO role (title, salary, department_id, manager_id) VALUES ($1, $2, $3)`,
+    return pool.query(`INSERT INTO role (title, salary, department_id) VALUES ($1, $2, $3)`,
       [roleName, roleSalary, deptMap[roleDept]],
       (err: Error, result: any) => {
         if (err) {
@@ -117,6 +107,21 @@ async function roleArray() {
   }
 }
 
+async function managerArray() {
+  try {
+    const managerQuery = `--sql
+      SELECT employee.id, employee.first_name, employee.last_name, role.title FROM employee JOIN role ON employee.role_id = role.id WHERE manager_id is NULL`;
+    const res = await pool.query(managerQuery)
+    return res.rows.map(row => ({
+      name: `${row.first_name} ${row.last_name} - ${row.title}`,
+      value: row.id,
+    }));
+  } catch (err) {
+    console.error('There was an error retrieving roles:', err);
+    return [];
+  }
+}
+
 export async function addEmployee(): Promise<void> {
 
   const roles = await roleArray();
@@ -124,6 +129,13 @@ export async function addEmployee(): Promise<void> {
   for(let i=0; i<roles.length; i++) {
     const { idNum, name } = roles[i];
     roleMap[name] = idNum;
+  }
+
+  const managers = await managerArray();
+  const managerMap: any = {}
+  for(let i=0; i<managers.length; i++) {
+    const { name, value } = managers[i];
+    managerMap[value] = name;
   }
 
   return inquirer
@@ -144,11 +156,17 @@ export async function addEmployee(): Promise<void> {
         message: 'What role is the employee associated with?',
         choices: roles,
       },
+      {
+        type: 'list',
+        name: 'deptManager',
+        message: 'Which manager is the employee associated with?',
+        choices: managers,
+      },
   ])
   .then((answers) => {
-    const { firstName, lastName, roleId } = answers;
-    pool.query(`INSERT INTO employee (first_name, last_name, role_id) VALUES ($1, $2, $3)`,
-      [firstName, lastName, roleMap[roleId]],
+    const { firstName, lastName, roleId, deptManager } = answers;
+    pool.query(`INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ($1, $2, $3, $4)`,
+      [firstName, lastName, roleMap[roleId], deptManager],
       (err: Error, result: QueryResult) => {
         if (err) {
           console.log(err);
